@@ -4,7 +4,6 @@ nginx:
   ports:
     - "80:80"
     - "443:443"
-    - "9000:9000"
   volumes:
     # app
     - ./app/src:/usr/share/nginx/html
