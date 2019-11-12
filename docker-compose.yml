@@ -13,6 +13,8 @@ nginx:
     # certificates
     - ./nginx/ca/server.crt/:/etc/nginx/server.crt:ro
     - ./nginx/ca/server.key/:/etc/nginx/server.key:ro
+  environment:
+    - APPLICATION_ENV=development
   links:
     - fpm:__DOCKER_PHP_FPM__
 
