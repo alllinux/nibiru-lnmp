@@ -48,3 +48,13 @@ mysql:
     - ./mysql:/var/lib/mysql
   environment:
     - MYSQL_ROOT_PASSWORD=mypassword
+  links:
+    - mailcatcher:mailcatcher
+
+# mailcatcher
+mailcatcher:
+  image: schickling/mailcatcher:latest
+  ports:
+    # Allow client to access 1025, 1080
+    - "1025:1025"
+    - "1080:1080"
