@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install -y \
         libjpeg62-turbo-dev \
         libmcrypt-dev \
         libpng-dev \
+        libc-client-dev \
+        libkrb5-dev \
+        zlib1g-dev \
+        libzip-dev \
+        sendmail \
     && pecl install mcrypt \
     && yes | pecl install xdebug \
     && docker-php-ext-install -j$(nproc) iconv \
@@ -22,6 +27,8 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install -j$(nproc) pdo \
     && docker-php-ext-install -j$(nproc) pdo_mysql \
     && docker-php-ext-install -j$(nproc) mbstring \
+    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+    && docker-php-ext-install -j$(nproc) imap \
     && echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.ini \
     && echo "xdebug.remote_enable=on" >> /usr/local/etc/php/conf.d/xdebug.ini \
     && echo "xdebug.remote_autostart=off" >> /usr/local/etc/php/conf.d/xdebug.ini \
