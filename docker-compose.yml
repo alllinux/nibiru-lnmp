@@ -1,60 +1,89 @@
-# web server
-nginx:
-  image: nginx:latest
-  ports:
-    - "80:80"
-    - "443:443"
-  volumes:
-    # app
-    - ./app/src:/usr/share/nginx/html
-    # nginx configs
-    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
-    # certificates
-    - ./nginx/ca/server.crt/:/etc/nginx/server.crt:ro
-    - ./nginx/ca/server.key/:/etc/nginx/server.key:ro
-  environment:
-    - APPLICATION_ENV=development
-  links:
-    - fpm:__DOCKER_PHP_FPM__
+version: '2.1'
+services:
+  # web server
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # app
+      - ./app/src:/usr/share/nginx/html
+      # nginx configs
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
+      # certificates
+      - ./nginx/ca/server.crt/:/etc/nginx/server.crt:ro
+      - ./nginx/ca/server.key/:/etc/nginx/server.key:ro
+    environment:
+      - APPLICATION_ENV=development
+      - IPV4_NETWORK=172.18.0
+    links:
+      - fpm:__DOCKER_PHP_FPM__
+    networks:
+      nibiru-network:
+        aliases:
+          - nginx
+  # php-fpm
+  fpm:
+    build: ./php-fpm
+    ports:
+      - "9000"
+    volumes:
+      - ./app/src:/usr/share/nginx/html
+      # Your php.ini
+      - ./php-fpm/php.ini-production:/usr/local/etc/php/php.ini:ro
+    links:
+      - mysql:mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=nibiru
+      - DB_USERNAME=nibiru
+      - DB_PASSWORD=mypassword
+      - IPV4_NETWORK=172.18.0
+    networks:
+      nibiru-network:
+        aliases:
+          - fpm
+  # database
+  mysql:
+    image: mysql:5.7.22
+    ports:
+      # Allow client to access 3306
+      - "3306:3306"
+    volumes:
+      # NOTE: your data will be stored in ./mysql
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=mypassword
+      - IPV4_NETWORK=172.18.0
+    links:
+      - mailcatcher:mailcatcher
+    networks:
+      nibiru-network:
+        aliases:
+          - mysql
 
-# php-fpm
-fpm:
-  build: ./php-fpm
-  ports:
-    - "9000"
-  volumes:
-    - ./app/src:/usr/share/nginx/html
-    # Your php.ini
-    - ./php-fpm/php.ini-production:/usr/local/etc/php/php.ini:ro
-  # environment:
-    # Set your APP env variables here:
-    # - APP_KEY=
-    - DB_HOST=mysql
-    - DB_DATABASE=nibiru
-    - DB_USERNAME=nibiru
-    - DB_PASSWORD=mypassword
-  links:
-    - mysql:mysql
+  # mailcatcher
+  mailcatcher:
+    image: schickling/mailcatcher:latest
+    ports:
+      # Allow client to access 1025, 1080
+      - "1025:1025"
+      - "1080:1080"
+    environment:
+      - IPV4_NETWORK=172.18.0
+    networks:
+      nibiru-network:
+        aliases:
+          - mailcatcher
 
-# database
-mysql:
-  image: mysql:5.7.22
-  ports:
-    # Allow client to access 3306
-    - "3306:3306"
-  volumes:
-    # NOTE: your data will be stored in ./mysql
-    - ./mysql:/var/lib/mysql
-  environment:
-    - MYSQL_ROOT_PASSWORD=mypassword
-  links:
-    - mailcatcher:mailcatcher
-
-# mailcatcher
-mailcatcher:
-  image: schickling/mailcatcher:latest
-  ports:
-    # Allow client to access 1025, 1080
-    - "1025:1025"
-    - "1080:1080"
+networks:
+  nibiru-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-nibiru
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/24
